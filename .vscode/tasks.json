@@ -1,0 +1,29 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run translation website",
+			"type": "shell",
+			"command": "${workspaceFolder}/.venv/bin/python",
+			"args": [
+				"-m",
+				"speech_translate.cli",
+				"web"
+			],
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Run live speech translation",
+			"type": "shell",
+			"command": "${workspaceFolder}/.venv/bin/python",
+			"args": [
+				"-m",
+				"speech_translate.cli",
+				"ui"
+			],
+			"isBackground": true,
+			"problemMatcher": []
+		}
+	]
+}

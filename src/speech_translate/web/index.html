@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LiveTranslate · Bilingual Subtitle Studio</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header><a class="brand" href="/"><span class="brand-icon">↔</span> LiveTranslate<span class="beta">WORKSPACE</span></a><a class="api-link" href="/docs" target="_blank" rel="noreferrer">Developer API ↗</a></header>
+  <main>
+    <section class="intro"><div class="eyebrow"><span class="dot"></span> LIVE SPEECH TRANSLATION</div><h1>Make language <span>feel closer.</span></h1><p>Speak English and receive Spanish, French, or German subtitles as you go.</p></section>
+    <section class="workspace">
+      <aside class="controls">
+        <div class="section-label">01 / INPUT &amp; SETTINGS</div>
+        <h2>Start with your voice.</h2>
+        <label for="language">Translate into</label>
+        <select id="language"><option value="es">Spanish · Español</option><option value="fr">French · Français</option><option value="de">German · Deutsch</option></select>
+        <label for="strategy">Caption timing</label>
+        <select id="strategy"><option value="pause">Natural pauses</option><option value="fixed">Fixed duration</option></select>
+        <label class="check"><input id="clean" type="checkbox" checked><span>Polish English text<small>Remove filler words and tidy punctuation</small></span></label>
+        <div class="record-area"><div class="mic-symbol" aria-hidden="true">◉</div><p id="record-hint">When you are ready, speak English.</p><button id="record" class="primary">Start recording <span>↗</span></button><button id="stop" class="secondary" hidden>Finish and translate the remainder</button></div>
+        <div class="divider"><span>OR UPLOAD AUDIO</span></div>
+        <label class="file-zone" for="audio-file"><span class="upload-icon">↑</span><strong id="file-name">Choose an audio file</strong><small>WAV / FLAC · Up to 2 minutes · 32 MB</small><input id="audio-file" type="file" accept=".wav,.flac,audio/wav,audio/flac"></label>
+        <button id="translate-file" class="secondary" disabled>Translate audio file</button>
+      </aside>
+      <section class="subtitles">
+        <div class="subtitle-toolbar"><div><div class="section-label">02 / BILINGUAL CAPTIONS</div><h2>Every sentence, understood.</h2></div><button id="clear" class="text-button">Clear</button></div>
+        <div class="status-bar"><span id="status-dot" class="dot"></span><span id="status" role="status" aria-live="polite">Waiting for input</span><span id="count">0 caption segments</span></div>
+        <div id="error" class="error" role="alert" hidden></div>
+        <div class="caption-columns">
+          <article class="caption-panel"><div class="caption-label"><span>EN</span> English transcript</div><div id="english" class="caption-text"><p class="placeholder">Your voice becomes text here.<small>English captions will appear after you record or upload audio.</small></p></div></article>
+          <article class="caption-panel translated"><div class="caption-label"><span id="target-code">ES</span> <b id="target-name">Spanish translation</b></div><div id="translation" class="caption-text"><p class="placeholder">Let another language hear you.<small>The translation will update with each English caption.</small></p></div></article>
+        </div>
+        <div class="subtitle-footer"><span id="timing">Segment-level captions · The final fragment is submitted when recording stops</span><button id="download" class="text-button" disabled>Export captions ↓</button></div>
+      </section>
+    </section>
+    <footer><span>English in. Three languages. More connection.</span><span>The first request may take a moment while models prepare.</span></footer>
+  </main>
+  <script type="module" src="/assets/app.js"></script>
+</body>
+</html>

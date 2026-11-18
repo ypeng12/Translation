@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "live-speech-translate"
+version = "0.1.0"
+description = "Local English speech to Spanish, French and German subtitles"
+requires-python = ">=3.10"
+dependencies = [
+  "torch>=2.2", "transformers>=4.45,<4.50", "numpy>=1.24,<2", "scipy>=1.10",
+  "sentencepiece>=0.2,<0.2.2", "sacremoses>=0.1", "silero-vad>=5,<7",
+  "gradio>=5.20,<6", "soundfile>=0.12", "sacrebleu>=2.4,<3", "jiwer>=3,<5",
+  "fastapi>=0.115,<1", "uvicorn>=0.30", "python-multipart>=0.0.18",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+data = ["datasets>=3,<5"]
+comet = ["unbabel-comet>=2.2,<3"]
+
+[project.scripts]
+live-translate = "speech_translate.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+speech_translate = ["web/*.html", "web/*.css", "web/*.js"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff.lint.per-file-ignores]
+# FastAPI requires these parameter defaults to declare multipart schema fields.
+"src/speech_translate/server.py" = ["B008"]
