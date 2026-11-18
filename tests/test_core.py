@@ -60,6 +60,50 @@ def test_fixed_boundaries_and_silence():
     assert buffer.push(np.zeros(20), final=True) == []
 
 
+def test_fixed_window_only_runs_vad_when_ready():
+    class CountingDetector(FakeModels):
+        calls = 0
+
+        def timestamps(self, audio):
+            self.calls += 1
+            return super().timestamps(audio)
+
+    detector = CountingDetector()
+    buffer = AudioBuffer(detector, sample_rate=10, max_seconds=2, strategy="fixed")
+    for _ in range(3):
+        assert buffer.push(np.ones(5)) == []
+    assert detector.calls == 0
+    assert len(buffer.push(np.ones(5))) == 1
+    assert detector.calls == 1
+
+
+def test_pause_inside_frame_preserves_following_speech():
+    class Detector:
+        def timestamps(self, audio):
+            mask = np.abs(audio) > .01
+            edges = np.diff(np.r_[False, mask, False].astype(int))
+            return [{"start": int(a), "end": int(b)}
+                    for a, b in zip(np.flatnonzero(edges == 1), np.flatnonzero(edges == -1))]
+
+    buffer = AudioBuffer(Detector(), sample_rate=10, max_seconds=4, pause_seconds=.6)
+    audio = np.r_[np.ones(10), np.zeros(8), np.ones(5)]
+    chunks = buffer.push(audio)
+    assert [len(chunk) for chunk in chunks] == [16]
+    chunks.extend(buffer.push(np.empty(0), final=True))
+    np.testing.assert_array_equal(np.concatenate(chunks), audio)
+
+
+def test_invalid_audio_configuration():
+    with pytest.raises(ValueError):
+        Config(sample_rate=8000)
+    with pytest.raises(ValueError):
+        AudioBuffer(FakeModels(), max_seconds=0)
+    with pytest.raises(ValueError):
+        normalize_audio(np.empty((2, 0)), 16000)
+    with pytest.raises(ValueError):
+        normalize_audio(np.ones(2), 16000, 0)
+
+
 def test_pipeline_raw_ablation_and_target_validation():
     pipeline = TranslationPipeline(FakeModels())
     samples = np.ones(16000, dtype=np.float32)

@@ -127,3 +127,16 @@ live-translate evaluate data/test.jsonl --languages es --comet
 
 参考：[Whisper 模型卡](https://huggingface.co/openai/whisper-base.en)、[OPUS-MT 模型卡](https://huggingface.co/Helsinki-NLP/opus-mt-en-es)、[Silero VAD](https://github.com/snakers4/silero-vad)。翻译直接使用模型和 tokenizer，不依赖 Transformers 的 translation pipeline。
 # Translation-
+
+## 工程验证与输入限制
+
+安装开发依赖后运行 `python -m pytest -q`；录音工作线程的测试使用
+`node --test tests/test_recorder.cjs`（Node.js 22 或更新版本）。GitHub Actions
+在 Python 3.10 和 3.12 上运行无需模型权重的单元与 API 测试。
+这些测试不代表真实语音的翻译准确率或端到端延迟。
+
+- 固定时长分段只在窗口满或结束时执行 VAD；停顿分段也识别同一帧内部的停顿。
+- 管线统一使用 16 kHz，外部输入会重采样；不支持配置其他模型内部采样率。
+- 上传音频在工作线程中解码，解码样本数上限为 120 秒 × 48 kHz × 双声道。
+- 实时连接等待首条设置最多 15 秒，等待下一条音频或停止消息最多 60 秒。
+- 非法实时设置和控制消息返回协议错误；录音结束未收到完成确认时显示中断状态。

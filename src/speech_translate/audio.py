@@ -7,7 +7,7 @@ from scipy.signal import resample_poly
 
 def normalize_audio(samples, sample_rate: int, target_rate: int = 16000) -> np.ndarray:
     """Accept soundfile float audio or Gradio integer/float audio."""
-    if sample_rate <= 0:
+    if sample_rate <= 0 or target_rate <= 0:
         raise ValueError("Sample rate must be positive")
     audio = np.asarray(samples)
     if audio.ndim not in (1, 2):
@@ -19,6 +19,8 @@ def normalize_audio(samples, sample_rate: int, target_rate: int = 16000) -> np.n
     else:
         audio = audio.astype(np.float32)
     if audio.ndim == 2:
+        if audio.shape[1] == 0:
+            raise ValueError("Audio must contain at least one channel")
         audio = audio.mean(axis=1)
     if not np.isfinite(audio).all():
         raise ValueError("Audio contains NaN or infinity")
@@ -39,6 +41,8 @@ class AudioBuffer:
                  max_seconds=8.0, pause_seconds=0.6, strategy="pause"):
         if strategy not in {"fixed", "pause"}:
             raise ValueError("Audio strategy must be fixed or pause")
+        if sample_rate <= 0 or not 0 < pause_seconds < max_seconds <= 25:
+            raise ValueError("Require positive sample rate and 0 < pause_seconds < max_seconds <= 25")
         self.detector = detector
         self.sample_rate = sample_rate
         self.max_samples = int(max_seconds * sample_rate)
@@ -52,9 +56,19 @@ class AudioBuffer:
         while self.pending.size:
             cut = min(self.pending.size, self.max_samples)
             candidate = self.pending[:cut]
-            spans = self.detector.timestamps(candidate)
             ready = final or self.pending.size >= self.max_samples
+            # Fixed windows need only one VAD pass when the window is complete.
+            if self.strategy == "fixed" and not ready:
+                break
+            spans = self.detector.timestamps(candidate)
             if self.strategy == "pause" and spans:
+                # A pause may be followed by new speech within the same input frame.
+                for left, right in zip(spans, spans[1:]):
+                    if right["start"] - left["end"] >= self.pause_samples:
+                        cut = left["end"] + self.pause_samples
+                        candidate = self.pending[:cut]
+                        ready = True
+                        break
                 end = spans[-1]["end"]
                 if cut - end >= self.pause_samples:
                     ready = True

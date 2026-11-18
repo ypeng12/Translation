@@ -16,6 +16,8 @@ class Config:
     local_files_only: bool = False
 
     def __post_init__(self):
+        if self.sample_rate != 16000:
+            raise ValueError("Whisper requires a 16000 Hz pipeline sample rate")
         if not 0 < self.pause_seconds < self.max_segment_seconds <= 25:
             raise ValueError("Require 0 < pause_seconds < max_segment_seconds <= 25")
 

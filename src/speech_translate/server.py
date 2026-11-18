@@ -1,6 +1,7 @@
 """Website backend, independent of the Gradio demonstration UI."""
 import asyncio
 import io
+import json
 from pathlib import Path
 
 import numpy as np
@@ -22,6 +23,22 @@ from .config import LANGUAGES, validate_language
 
 WEB = Path(__file__).parent / "web"
 MAX_UPLOAD = 32 * 1024 * 1024
+MAX_DECODED_SAMPLES = 120 * 48000 * 2
+
+
+def decode_audio(content):
+    import soundfile as sf
+
+    try:
+        with sf.SoundFile(io.BytesIO(content)) as file:
+            duration = file.frames / file.samplerate
+            if not 0 < duration <= 120:
+                raise ValueError("Audio must be between 0 and 120 seconds")
+            if file.frames * file.channels > MAX_DECODED_SAMPLES:
+                raise ValueError("Decoded audio is too large; use mono or stereo at 48 kHz or lower")
+            return file.read(dtype="float32"), file.samplerate
+    except (sf.LibsndfileError, RuntimeError) as error:
+        raise ValueError("Cannot decode this file. Please use WAV or FLAC.") from error
 
 
 class TextRequest(BaseModel):
@@ -62,8 +79,6 @@ def create_app(pipeline):
     @app.post("/api/translate/audio")
     async def translate_audio(audio: UploadFile = File(...), language: str = Form("es"),
                               strategy: str = Form("pause"), clean: bool = Form(True)):
-        import soundfile as sf
-
         try:
             validate_language(language)
             if strategy not in {"pause", "fixed"}:
@@ -71,15 +86,11 @@ def create_app(pipeline):
             content = await audio.read(MAX_UPLOAD + 1)
             if len(content) > MAX_UPLOAD:
                 raise HTTPException(413, "Audio file exceeds 32 MB")
-            try:
-                with sf.SoundFile(io.BytesIO(content)) as file:
-                    duration = file.frames / file.samplerate
-                    if duration > 120 or duration <= 0:
-                        raise ValueError("Audio must be between 0 and 120 seconds")
-                    samples, rate = file.read(dtype="float32"), file.samplerate
-            except (sf.LibsndfileError, RuntimeError) as error:
-                raise ValueError("Cannot decode this file. Please use WAV or FLAC.") from error
-            results = await infer(pipeline.audio, samples, rate, language, clean, strategy)
+            def process_upload():
+                samples, rate = decode_audio(content)
+                return pipeline.audio(samples, rate, language, clean, strategy)
+
+            results = await infer(process_upload)
             return {"english": "\n".join(r.english for r in results),
                     "translation": "\n".join(r.translation for r in results),
                     "language": language, "segments": [r.to_dict() for r in results]}
@@ -94,10 +105,14 @@ def create_app(pipeline):
         try:
             # First message sets the session; subsequent binary frames are float32 mono PCM.
             settings = await asyncio.wait_for(socket.receive_json(), timeout=15)
+            if not isinstance(settings, dict):
+                raise ValueError("Session settings must be a JSON object")
             language = settings.get("language", "es")
+            if not isinstance(language, str):
+                raise ValueError("language must be a string")
             validate_language(language)
-            rate = int(settings.get("sample_rate", 16000))
-            if rate not in {8000, 16000, 22050, 24000, 32000, 44100, 48000, 96000}:
+            rate = settings.get("sample_rate", 16000)
+            if type(rate) is not int or rate not in {8000, 16000, 22050, 24000, 32000, 44100, 48000, 96000}:
                 raise ValueError("Unsupported sample rate")
             strategy = settings.get("strategy", "pause")
             clean = settings.get("clean", True)
@@ -111,13 +126,13 @@ def create_app(pipeline):
                 return [pipeline.segment(chunk, language, clean).to_dict() for chunk in chunks]
 
             while True:
-                message = await socket.receive()
+                message = await asyncio.wait_for(socket.receive(), timeout=60)
                 if message["type"] == "websocket.disconnect":
                     return
-                final = message.get("text") == '{"type":"stop"}'
-                if message.get("text") and not final:
-                    import json
-                    final = json.loads(message["text"]).get("type") == "stop"
+                final = False
+                if message.get("text") is not None:
+                    control = json.loads(message["text"])
+                    final = isinstance(control, dict) and control.get("type") == "stop"
                     if not final:
                         raise ValueError("Expected a PCM frame or stop message")
                 raw = message.get("bytes") or b""

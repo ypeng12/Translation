@@ -1,11 +1,12 @@
 import io
 
 import numpy as np
+import pytest
 import soundfile as sf
 from fastapi.testclient import TestClient
 
 from speech_translate.pipeline import TranslationPipeline
-from speech_translate.server import create_app
+from speech_translate.server import MAX_DECODED_SAMPLES, create_app
 
 
 class DemoModels:
@@ -71,3 +72,47 @@ def test_websocket_pause_then_stop_does_not_duplicate():
         assert ws.receive_json()["type"] == "ack"
         ws.send_json({"type": "stop"})
         assert ws.receive_json()["type"] == "done"
+
+
+@pytest.mark.parametrize("settings", [[], None, {"language": []},
+                                     {"sample_rate": 16000.5}, {"clean": "false"}])
+def test_websocket_rejects_invalid_settings(settings):
+    with client() as api, api.websocket_connect("/api/live") as ws:
+        ws.send_json(settings)
+        response = ws.receive_json()
+        assert response["type"] == "error"
+        assert "inference failed" not in response["message"]
+        assert ws.receive()["code"] == 1008
+
+
+@pytest.mark.parametrize("control", ["[]", "null", "", '{"type":"unknown"}'])
+def test_websocket_rejects_invalid_control(control):
+    with client() as api, api.websocket_connect("/api/live") as ws:
+        ws.send_json({})
+        assert ws.receive_json()["type"] == "ready"
+        ws.send_text(control)
+        assert ws.receive_json()["type"] == "error"
+        assert ws.receive()["code"] == 1008
+
+
+def test_audio_rejects_large_decoded_payload_before_reading(monkeypatch):
+    class OversizedAudio:
+        samplerate = 96000
+        frames = 120 * samplerate
+        channels = 8
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def read(self, **kwargs):
+            pytest.fail("Oversized audio must be rejected before allocating samples")
+
+    assert OversizedAudio.frames * OversizedAudio.channels > MAX_DECODED_SAMPLES
+    monkeypatch.setattr(sf, "SoundFile", lambda _: OversizedAudio())
+    with client() as api:
+        response = api.post("/api/translate/audio", files={"audio": ("large.flac", b"compressed")})
+        assert response.status_code == 400
+        assert "too large" in response.json()["detail"]

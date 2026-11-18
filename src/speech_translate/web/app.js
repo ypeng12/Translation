@@ -2,6 +2,7 @@ const $ = id => document.getElementById(id);
 const languageNames = {es:'Spanish',fr:'French',de:'German'};
 let rows = [], busy = false, socket, context, media, recorder, source;
 let frames = [], inFlight = false, finishing = false, stopping = false, stopSent = false;
+let completed = false;
 function status(text, live = false) {
   $('status').textContent = text;
   $('status-dot').classList.toggle('recording', live);
@@ -57,10 +58,11 @@ $('translate-file').onclick = async () => {
   finally { lock(false); }
 };
 async function releaseAudio() {
-  media?.getTracks().forEach(track => track.stop());
-  source?.disconnect(); recorder?.disconnect();
-  if (context && context.state !== 'closed') await context.close();
+  const oldContext = context, oldMedia = media, oldSource = source, oldRecorder = recorder;
   media = source = recorder = context = null;
+  oldMedia?.getTracks().forEach(track => track.stop());
+  oldSource?.disconnect(); oldRecorder?.disconnect();
+  if (oldContext && oldContext.state !== 'closed') await oldContext.close();
 }
 function pump() {
   if (!socket || socket.readyState !== WebSocket.OPEN || inFlight) return;
@@ -73,18 +75,34 @@ async function finishRecording() {
   // Disconnect the source first, then request the worklet's last partial frame.
   source?.disconnect();
   // A message-channel round trip confirms all final PCM messages reached the main thread.
-  if (recorder) await new Promise(resolve => {
-    recorder.port.addEventListener('message', function flushed(event) {
-      if (event.data === 'flushed') { recorder?.port.removeEventListener('message', flushed); resolve(); }
+  const activeSocket = socket;
+  try {
+    if (recorder) await new Promise((resolve, reject) => {
+      const port = recorder.port;
+      const timer = setTimeout(() => {
+        port.removeEventListener('message', flushed);
+        reject(new Error('Microphone did not finish. The final audio fragment may be missing.'));
+      }, 3000);
+      function flushed(event) {
+        if (event.data !== 'flushed') return;
+        clearTimeout(timer); port.removeEventListener('message', flushed); resolve();
+      }
+      port.addEventListener('message', flushed);
+      port.postMessage('finish');
     });
-    recorder.port.postMessage('finish');
-  });
-  await releaseAudio(); stopping = true; status('Finishing the remaining caption…'); pump();
+  } catch (e) {
+    if (socket === activeSocket) error(e.message);
+  }
+  if (socket !== activeSocket) return;
+  await releaseAudio();
+  if (socket !== activeSocket) return;
+  stopping = true; status('Finishing the remaining caption…'); pump();
 }
 $('record').onclick = async () => {
   if (busy) return;
   reset(); lock(true); status('Connecting to microphone…');
   finishing = stopping = stopSent = inFlight = false; frames = [];
+  completed = false;
   try {
     if (!navigator.mediaDevices?.getUserMedia || !window.AudioWorkletNode) throw new Error('This browser does not support recording. Use a microphone-enabled browser via localhost or HTTPS.');
     media = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
@@ -103,7 +121,7 @@ $('record').onclick = async () => {
       } else if (message.type === 'segment') add(message);
       else if (message.type === 'ack') { inFlight = false; pump(); }
       else if (message.type === 'error') { error(message.message); socket.close(); }
-      else if (message.type === 'done') { status(rows.length ? 'Recording translation complete' : 'No speech detected'); socket.close(); }
+      else if (message.type === 'done') { completed = true; status(rows.length ? 'Recording translation complete' : 'No speech detected'); socket.close(); }
     };
     recorder.port.onmessage = ({data}) => {
       if (!(data instanceof ArrayBuffer)) return;
@@ -114,7 +132,7 @@ $('record').onclick = async () => {
     socket.onerror = () => error('Connection interrupted. Confirm that the local server is running.');
     socket.onclose = async () => {
       await releaseAudio(); lock(false); $('record').hidden = false; $('stop').hidden = true;
-      if (!stopSent) status('Recording interrupted. Unsubmitted audio was not saved.');
+      if (!completed) status('Recording interrupted. Some audio may not have been translated.');
       socket = null; frames = [];
     };
   } catch (e) {
