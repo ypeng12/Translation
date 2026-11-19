@@ -27,6 +27,28 @@ test('recorder averages channels and flushes the final fragment exactly once', (
   recorder.port.onmessage({data: 'finish'});
   assert.equal(messages.length, 3);
   assert.equal(messages[2], 'flushed');
+  assert.equal(recorder.process([[new Float32Array(8000).fill(.8)]]), false);
+  assert.equal(messages.length, 3);
+});
+
+test('44.1 kHz render quanta produce exact half-second frames and one lossless tail', () => {
+  const chunks = [];
+  let Recorder;
+  const sandbox = {Float32Array, sampleRate: 44100,
+    AudioWorkletProcessor: class { constructor() { this.port = {postMessage: value => chunks.push(value)}; } },
+    registerProcessor: (_, implementation) => { Recorder = implementation; },
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/speech_translate/web/recorder.js'), 'utf8'), sandbox);
+  const recorder = new Recorder();
+  const signal = Float32Array.from({length: 44603}, (_, i) => Math.sin(i / 7));
+  for (let offset = 0; offset < signal.length; offset += 128) {
+    recorder.process([[signal.subarray(offset, offset + 128)]]);
+  }
+  recorder.port.onmessage({data: 'finish'});
+  assert.equal(chunks.pop(), 'flushed');
+  const parts = chunks.map(buffer => new Float32Array(buffer));
+  assert.deepEqual(parts.map(part => part.length), [22050, 22050, 503]);
+  assert.deepEqual(parts.flatMap(part => Array.from(part)), Array.from(signal));
 });
 
 test('finish timeout releases capture and submits already captured audio', async () => {

@@ -14,12 +14,15 @@ class Config:
     max_segment_seconds: float = 8.0
     pause_seconds: float = 0.6
     local_files_only: bool = False
+    recording_window_seconds: float = 25.0
 
     def __post_init__(self):
         if self.sample_rate != 16000:
             raise ValueError("Whisper requires a 16000 Hz pipeline sample rate")
         if not 0 < self.pause_seconds < self.max_segment_seconds <= 25:
             raise ValueError("Require 0 < pause_seconds < max_segment_seconds <= 25")
+        if not self.pause_seconds < self.recording_window_seconds <= 25:
+            raise ValueError("Recording window must exceed pause duration and be at most 25 seconds")
 
 
 def validate_language(language: str) -> None:

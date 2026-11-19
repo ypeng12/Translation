@@ -1,142 +1,155 @@
-# 英语实时语音翻译
+# LiveTranslate
 
-依据项目提案，先在本地建立可运行框架，之后再部署 Hugging Face Spaces。这里的模型搭建指接入和组合预训练模型，第一阶段不从零训练，也不调用 LLM API。
+LiveTranslate turns spoken English into bilingual captions. Choose Spanish, French, or German, then try one of four sample recordings, speak into a microphone, or upload a WAV or FLAC file. The website displays the English transcript alongside the translation and can export both to a text file. [Try the demo](https://ypeng12-live-translate.hf.space/) · [Hugging Face Space](https://huggingface.co/spaces/Ypeng12/live-translate)
 
-## 整体结构
+The local website and the Space run the same FastAPI application. Model inference happens on the server hosting the page, so running it on your laptop keeps microphone and uploaded audio on that machine. The project uses pretrained models and requires no external inference API key.
 
-```mermaid
-flowchart LR
-    A[麦克风 / 音频文件] --> B[单声道 + 16 kHz]
-    B --> C[Silero VAD + 有界音频缓存]
-    C --> D[Whisper 英文转写]
-    D --> E[规则清洗 + 术语规范化]
-    E --> F[OPUS-MT 西 / 法 / 德]
-    F --> G[FastAPI + 网站双语字幕]
-    D --> H[原始转写基线]
-    H --> I[离线评估]
-    F --> I
-```
+Use English for code identifiers, comments, documentation and interface text. Translation outputs, human references and test fixtures use the language being translated or scored.
 
-| 模块 | 当前选择 | 后续扩展 |
-| --- | --- | --- |
-| ASR | `openai/whisper-base.en` | 对比 `openai/whisper-small.en` |
-| VAD | Silero，CPU 执行 | 调整停顿阈值 |
-| 翻译 | `Helsinki-NLP/opus-mt-en-es` / `en-fr` / `en-de` | 同一接口下加入 NLLB 对照 |
-| 文本处理 | 去口头填充词、有限去重、标点、I 大写、术语别名 | 用消融实验决定规则取舍 |
-| 界面 | 本地 HTML/CSS/JS 网站 + FastAPI，保留 Gradio 演示 | 接入已有网站 / HF 部署 |
-| 评估 | WER、chrF++、BLEU、得分比、分步时间 | 可选 COMET、人评和直播延迟测量 |
+## Run locally
 
-核心代码在 [src/speech_translate](src/speech_translate/)，模型接口在 [models.py](src/speech_translate/models.py)，音频缓存和分段在 [audio.py](src/speech_translate/audio.py)，文本规则在 [text.py](src/speech_translate/text.py)，评估在 [evaluation.py](src/speech_translate/evaluation.py)。
-
-## 安装与运行
-
-建议 Python 3.10–3.12。CPU 可运行，速度需要实测；CUDA 自动选用，Apple MPS 可显式选择。
+Use Python 3.10–3.12. Run these commands from the project root. The preload step downloads and checks the model weights for all three languages.
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e '.[dev]'
-
-# 先下载并检查模型；不创建 Space，不上传任何内容。
 live-translate preload --languages es fr de
-
-# 启动网站及 API：http://127.0.0.1:8000
 live-translate web
-
-# 备选：Gradio 模型演示
-live-translate ui
-
-# 指定更大的英文 ASR 模型
-live-translate --asr-model openai/whisper-small.en ui
-
-# 缓存齐全以后，HF 模型仅从本地读取
-HF_HUB_OFFLINE=1 live-translate --offline ui
 ```
 
-打开终端输出的本地地址。选择目标语言、分段策略、是否清洗，再开始录音；停止录音会提交剩余片段。更换设置前停止并清空会话。没有检测到人声时不调用 Whisper。
+Open the [local website](http://127.0.0.1:8000/), select a language, and click **Translate sample**. Expand **Read the reference transcript** to check the English words against the recording. For live captions, click **Record microphone**, then **Stop and finish captions** to translate the remaining audio. Browser microphone access requires localhost or HTTPS.
 
-## 接入网站
+### When a spoken word comes out wrong
 
-所有源码都保存在当前本地项目中，不依赖托管网站编辑器。网页文件位于 [web/](src/speech_translate/web/)，后端位于 [server.py](src/speech_translate/server.py)，复用相同的模型与评估代码。前端使用原生 HTML、CSS、JavaScript，无需 Node 构建，也不从 CDN 加载前端依赖。
+1. **Check what the microphone picked up.** Use **Speech** in a noisy room or **Original** with a clean external mic. These choices request different browser processing settings. Watch the input meter as you speak. A peak warning means the signal is approaching digital clipping.
+2. **Listen back, then try more context.** After stopping a recording of up to two minutes, play your captured audio. **Review recording** sends that recording through the upload pipeline, which can recognize up to 25 seconds of speech together. Live captions stay visible while the review runs. The replay is held in browser memory and clears with the session.
+3. **Correct a name, number, or phrase.** Click **Edit a caption**, select the segment, and enter what was said. **Translate correction** updates that segment and the bilingual download. Only the edited English text is sent for this action.
+
+The sample menu includes an offer of help (4 s), a hawk in pursuit (4 s), a question about a mountain (6 s), and Rachel's arrival (11 s). Each has a different speaker and a reference transcript. Try the hawk example to exercise correction: in our check Whisper heard “fouled” where the reader said “followed.”
+
+| Task | Command |
+| --- | --- |
+| Translate a recording from the terminal | `live-translate transcribe recording.wav --language es` |
+| Serve the website using cached weights | `HF_HUB_OFFLINE=1 live-translate --offline web` |
+| Use Apple Metal on a supported Mac | `live-translate --device mps web` |
+| Load a glossary of English names and aliases | `live-translate --glossary configs/glossary.example.json web` |
+| Try the Gradio interface on port 7860 | `live-translate ui` |
+| Compare a larger English recognizer | `live-translate --asr-model openai/whisper-small.en web` |
+
+Automatic device selection uses CUDA when available and otherwise uses the CPU. The local web server binds to `127.0.0.1:8000` by default. Use `live-translate web --host 0.0.0.0 --port 8000` to serve it on a network.
+
+## How captions are produced
+
+| Stage | Implementation |
+| --- | --- |
+| Prepare audio | Convert to 16 kHz mono. Silero voice activity detection (VAD) finds speech and skips silent input. |
+| Transcribe | Whisper `openai/whisper-base.en` produces an English transcript for each segment. |
+| Clean up English | Optional rules remove selected fillers and accidental repetitions, tidy punctuation and capitalization, and apply glossary aliases. The API also returns the raw transcript for comparison. |
+| Translate | A separate Helsinki-NLP OPUS-MT model handles each language pair. |
+| Display | The website pairs each English segment with its translation. Microphone captions appear as each segment finishes. |
+
+Uploads and live speech use different windows. With **Natural pauses**, a recording up to 25 seconds stays together after a speech check. Keeping the full recording gives Whisper context around quiet words and sentence boundaries. Longer uploads split at pauses into windows of up to 25 seconds. Microphone input uses a 0.6-second pause threshold and an eight-second maximum window. **Fixed duration** also uses an eight-second cap. Loading Silero preserves the CPU thread budget available to Whisper and OPUS-MT.
+
+The model adapters, segmentation logic, cleanup rules and pipeline can be used independently of the website. [Model adapters](src/speech_translate/models.py) · [Audio segmentation](src/speech_translate/audio.py) · [Text rules](src/speech_translate/text.py) · [Pipeline](src/speech_translate/pipeline.py)
+
+The microphone converter now preserves the resampling filter history between WebSocket frames and flushes the final partial frame on stop. With the 4.09-second sample played at simulated 44.1 and 48 kHz capture rates, each stream produced the same 65,440 output samples as a single-pass conversion, including matching waveform values. This test measures signal fidelity. Speaker-specific accuracy requires a recording and its intended words.
+
+We compared live captions with **Review recording** on the public Space using four held-out English recordings. Three outputs were identical. In the fourth, live recognition split a percentage into “one. 100%” and review recovered “100%.” Strict word error rate changed from 5.26% to 6.58% because the reference spells out “one-hundred percent.” Spanish chrF++ moved from 44.48 to 44.49. Review can help at a phrase boundary, while names may still need a correction. [Hosted comparison and reproduction steps](benchmarks/README.md) · [Per-recording transcripts](benchmarks/results/hosted-capture-review.json)
+
+## Use the API from a website
+
+The included frontend uses plain HTML, CSS, JavaScript and a browser AudioWorklet. FastAPI serves it from the same origin as the API. To integrate with an existing website, route the API paths through its backend or reverse proxy and enable WebSocket forwarding for live captions. [Frontend source](src/speech_translate/web/) · [FastAPI routes](src/speech_translate/server.py) · [Interactive API documentation](https://ypeng12-live-translate.hf.space/docs)
+
+| Endpoint | Request and response |
+| --- | --- |
+| `GET /api/health` | Returns service status, supported languages and whether the recognizer has loaded. |
+| `POST /api/translate/text` | Accepts JSON with `text`, `language` and `clean`. Returns English text and its translation. |
+| `POST /api/translate/audio` | Accepts multipart fields `audio`, `language`, `strategy` and `clean`. Returns both captions and per-segment details and timings. The website accepts WAV or FLAC up to 32 MiB and 120 seconds. |
+| `WS /api/live` | Accepts session settings followed by mono PCM audio frames. Streams caption segments and acknowledges each frame. |
+
+Try the local audio endpoint using the sample included with the website.
 
 ```bash
-live-translate web --port 8000
-# 同一局域网访问时显式绑定所有接口；麦克风在非 localhost 上需要 HTTPS。
-live-translate web --host 0.0.0.0 --port 8000
+curl --fail-with-body http://127.0.0.1:8000/api/translate/audio \
+  -F 'audio=@src/speech_translate/web/example.wav' \
+  -F 'language=fr' -F 'strategy=pause' -F 'clean=true'
 ```
 
-- `GET /`：网站，包括音频上传、实时录音、双语字幕和文本导出。
-- `GET /docs`：可交互 API 文档。
-- `GET /api/health`：服务状态和支持的语言；不触发权重加载。
-- `POST /api/translate/text`：JSON `{ "text": "Hello.", "language": "es", "clean": true }`。
-- `POST /api/translate/audio`：multipart 字段 `audio`、`language`、`strategy`、`clean`；返回双语文本、片段和时间。最大 32 MB、120 秒，支持 WAV/FLAC。
-- `WS /api/live`：第一条 JSON 设置 `language`、`sample_rate`、`strategy`、`clean`；收到 `ready` 后发送单声道小端 float32 PCM，每帧最多 2 秒。服务返回 `segment` 和 `ack`；停止时发送 `{ "type": "stop" }`，服务先输出缓存尾段，再返回 `done`。客户端必须等 `ack` 再发下一帧，避免无界排队。
+For live input, send `{"language":"fr","sample_rate":16000,"strategy":"pause","clean":true}` as the first WebSocket message. Wait for `ready`, send one binary frame of little-endian float32 mono PCM (up to two seconds), collect any `segment` messages, and wait for `ack` before sending the next frame. At the end, send `{"type":"stop"}` and collect the remaining segments through `done`. The server allows 15 seconds for settings and 60 seconds between subsequent messages. [Browser client](src/speech_translate/web/app.js)
 
-网页用浏览器 AudioWorklet 采集音频，保留最后不足半秒的录音；后端维护独立连接缓存。缓冲积压过多时结束采集并处理已采音频，不静默丢弃。字幕导出为双语 TXT，不包含未经测量的 SRT 时间戳。纯静音会被过滤。
+## Measured accuracy and speed
 
-接入已有网站时，可以直接复用 API 和前端调用代码。默认同源服务，不开放跨域；另域部署时再按实际网站域名配置 CORS、身份验证、HTTPS 和资源配额。当前默认绑定 localhost，是本地开发版本。
+Four held-out FLEURS recordings contained 35.50 seconds of English speech with human references in all three target languages. A separate four-recording development set guided configuration selection. The table compares the previous and updated pipelines in one warm run per version on a local Intel Core i7-9750H. Upload timing covers audio preparation, VAD, recognition, cleanup and Spanish translation. Model loading, network transit and browser rendering are outside the timer.
 
-```bash
-live-translate transcribe recording.wav --language es
-live-translate --device mps transcribe recording.wav --language fr
-live-translate --glossary configs/glossary.example.json ui
-python -m pytest -q
-```
+| Held-out metric | Before | After |
+| --- | ---: | ---: |
+| English-to-Spanish upload processing time | 26.37 s | 23.39 s |
+| Spanish real-time factor (processing time / audio duration) | 0.743 | 0.659 |
+| English word error rate (project scoring) | 5.26% | 6.58% |
+| English word error rate (Whisper normalization) | 4.05% | 2.70% |
+| Spanish translation chrF++ | 44.48 | 44.49 |
+| French translation chrF++ | 54.32 | 56.95 |
+| German translation chrF++ | 58.87 | 59.01 |
 
-默认最大音频片段 8 秒，停顿阈值 0.6 秒。`fixed` 按固定时长提交，`pause` 在检测到尾部停顿时提前提交；两者都通过 VAD 过滤纯静音。字幕是片段级更新，不是逐字流式 ASR。模型首次加载会增加等待时间，持续语音最长等到片段上限才提交；不能据此承诺几秒以内的延迟。
+Spanish processing took 2.98 seconds less. Translation chrF++ increased most for French. The English word error rates moved in opposite directions because the recognizer changed “one 100%” to “100%” for the reference “one-hundred percent.” Project scoring counted one additional error (5 of 76 words). Whisper's number normalization counted one fewer (2 of 74 words).
 
-## 数据与评估
+Live timing was measured separately by replaying one 12.84-second recording at microphone pace. The first Spanish caption arrived at 7.86 seconds, down from 8.09. The final caption arrived 3.82 seconds after the recording ended, up from 3.37. Both versions produced the same captions. These small samples describe this machine and these recordings. [Benchmark method, per-recording results and reproduction commands](benchmarks/README.md)
 
-准备 JSONL，一行一个显式对齐的样本，结构见 [data/example.jsonl](data/example.jsonl)。示例仅展示格式，不附带音频，也不作为评测数据。音频路径相对于清单所在目录。
+### Evaluate on your own recordings
 
-```json
-{"id":"aligned-sentence-id","audio":"audio/001.wav","english":"Hello.","references":{"es":"Hola.","fr":"Bonjour.","de":"Hallo."}}
-```
-
-提案使用 FLEURS 英语音频和 FLORES 人工译文。正式评估前需要核实数据版本、划分、句子 ID 和英文文本；不能按两份数据的行号直接拼接。先准备一个人工核对的小样本集，再扩展到固定测试集。框架检查唯一 ID、必需字段、音频存在和非空译文，但不能代替语义对齐审核。
+Create a JSONL manifest with one unique sentence ID, an audio path relative to the manifest, the English transcript and human translations for the languages being scored. Align recordings and translations by sentence ID within the same split, then verify the text. The example manifest illustrates the format and requires you to supply its audio. [Example manifest](data/example.jsonl) · [Evaluation code](src/speech_translate/evaluation.py)
 
 ```bash
 live-translate evaluate data/test.jsonl --languages es fr de --output outputs/evaluation.json
 live-translate evaluate data/test.jsonl --languages es --strategy fixed --output outputs/fixed.json
 
-# 可选，安装后会另行下载较大的 COMET 模型
+# Optional COMET scoring downloads the evaluation model on first use.
 python -m pip install -e '.[comet]'
 live-translate evaluate data/test.jsonl --languages es --comet
 ```
 
-每种语言分别比较：
+The evaluator translates the human English transcript, the raw recognized English and the cleaned recognized English with the same translation model. It scores all three against the same human translation with chrF++ and BLEU. The project target is a cleaned-speech chrF++ score of at least 80% of the score from human English input. The updated pipeline retained 98.98% for Spanish, 95.23% for French and 93.55% for German on the four held-out recordings. These percentages measure relative translation scores.
 
-1. **gold_text**：人工英文转写 → 同一个翻译模型 → 人工目标译文评分。
-2. **raw_asr**：原始 ASR → 同一个翻译模型 → 同一人工译文评分。
-3. **processed**：相同 ASR 片段 → 文本处理 → 同一个翻译模型 → 同一人工译文评分。
+### Next evaluation priorities
 
-主要目标为 `processed chrF++ / gold_text chrF++ >= 0.80`，不是 BLEU 达到 80。分母为零时比值不可定义；比值不强制截断到 1。负的清洗增益也如实输出。WER 使用明确的大小写/标点归一化。冷启动加载排除在离线 RTF 外；音频归一化、VAD、ASR、清洗、翻译都计入语音管线总时间，另外两组基线翻译与指标计算不计入。
+1. Expand the held-out set across speakers, recording lengths, names and numbers. Repeat timing runs and report WER, chrF++ and processing time per language before changing the default recognizer.
+2. Measure the delay from the end of speech to the on-screen caption in a real browser. Prioritize the final caption, which took longer in the microphone replay.
+3. Evaluate the proposal's COMET target of 0.80 and mean human rating of 4/5 on the expanded set. Punctuation-based buffering and alternative translation models also remain experiments. [Project proposal](641%20.pdf)
 
-提案还要求 COMET ≥ 0.80、人评平均 ≥ 4/5 和直播延迟。可选 COMET 输出固定 checkpoint 的原始分值，阈值解释需要结合该模型；人评与完整录音到字幕延迟尚需专项实验。离线 RTF 不能替代直播延迟。
+### Streaming, LLMs and the KV cache
 
-## 当前边界与下一步
+The first streaming experiment is to show words that agree across two consecutive Whisper passes, then translate a stable phrase. For automatic corrections, evaluate a local language model that picks among a few ASR hypotheses and can keep the original. Track changed names, numbers and negations alongside overall word error rate. Both are proposed experiments. [Whisper-Streaming](https://aclanthology.org/2023.ijcnlp-demo.3/) · [HyPoradise](https://proceedings.neurips.cc/paper_files/paper/2023/hash/6492267465a7ac507be1f9fd1174e78d-Abstract-Datasets_and_Benchmarks.html)
 
-- 已实现模型适配、两种音频分段、文本清洗、术语别名、网站及 API、Gradio 演示和离线评估。
-- [SentenceBuffer](src/speech_translate/text.py) 提供标点缓存原语，尚未接入界面和评估；标点分段对比仍是后续任务。
-- 当前不做激进缩写展开、英文数字词转数字或自动人名恢复；缺少依据时这些规则会改变意思。规则需要通过真实测试集再增加。
-- 未进行微调，也未默认接入 NLLB。若基线错误分析支持微调，再准备训练/验证/测试划分和训练脚本。
-- Gradio 已提供浏览器麦克风输入，当前无需 `sounddevice`；需要独立桌面录音程序时再加入。
-- 不声称已达到准确率或速度目标；没有正式对齐测试集时，只能验证工程链路。
-- 本机已验证 Whisper、Silero 和三种 OPUS-MT 权重加载。公开 10.435 秒音频已产生英文转写及西/法/德输出；CPU 上西语两个片段的计算 RTF 约为 2.21 和 2.68，尚未达到实时目标。这是单样本冒烟验证，不是准确率评估。分段截断导致的词句错误也需要后续优化。
-- 建议顺序：小样本端到端验证 → 对齐数据 → 各语言基线 → 文本/分段消融 → 速度调优 → HF Spaces。
+Whisper and OPUS-MT already reuse attention keys and values while decoding a single segment. On four English transcripts, Spanish translation generation took a median of 4.05 s with caching and 12.27 s without it on the local CPU. Output tokens matched in every run. A new audio window or edited English phrase changes the encoder input and needs a fresh generation. The research notes also describe a separate prefix-cache experiment for a future local LLM corrector. [Research plan, papers and cache experiment](benchmarks/RESEARCH.md)
 
-参考：[Whisper 模型卡](https://huggingface.co/openai/whisper-base.en)、[OPUS-MT 模型卡](https://huggingface.co/Helsinki-NLP/opus-mt-en-es)、[Silero VAD](https://github.com/snakers4/silero-vad)。翻译直接使用模型和 tokenizer，不依赖 Transformers 的 translation pipeline。
-# Translation-
+## Deploy a Hugging Face Space
 
-## 工程验证与输入限制
+The public demo runs on CPU Basic. Its Docker image downloads the weights at build time and runs the same web server on port 7860 with offline model loading. The publishing script selects the application code, sample and deployment files, and uses the English Space card as the hosted README. [Space card](space/README.md) · [Dockerfile](Dockerfile) · [Publishing script](scripts/publish_space.py)
 
-安装开发依赖后运行 `python -m pytest -q`；录音工作线程的测试使用
-`node --test tests/test_recorder.cjs`（Node.js 22 或更新版本）。GitHub Actions
-在 Python 3.10 和 3.12 上运行无需模型权重的单元与 API 测试。
-这些测试不代表真实语音的翻译准确率或端到端延迟。
+From an activated environment authenticated with write access to your Hugging Face namespace, replace `YOUR_NAMESPACE` with your username or organization.
 
-- 固定时长分段只在窗口满或结束时执行 VAD；停顿分段也识别同一帧内部的停顿。
-- 管线统一使用 16 kHz，外部输入会重采样；不支持配置其他模型内部采样率。
-- 上传音频在工作线程中解码，解码样本数上限为 120 秒 × 48 kHz × 双声道。
-- 实时连接等待首条设置最多 15 秒，等待下一条音频或停止消息最多 60 秒。
-- 非法实时设置和控制消息返回协议错误；录音结束未收到完成确认时显示中断状态。
+```bash
+# Inspect the files that will be published.
+python scripts/publish_space.py YOUR_NAMESPACE/live-translate --dry-run
+
+# Create a public Docker Space and publish the demo.
+python scripts/publish_space.py YOUR_NAMESPACE/live-translate
+
+# Publish a later revision to the existing Space.
+python scripts/publish_space.py YOUR_NAMESPACE/live-translate --update
+```
+
+## Tests and credits
+
+Run the model-independent Python suite and browser recorder tests from the project root. CI runs the Python tests on 3.10 and 3.12 and the JavaScript checks on Node.js 22.
+
+```bash
+python -m pytest -q
+node --check src/speech_translate/web/app.js
+node --test tests/*.cjs
+```
+
+The four demo recordings come from LibriSpeech by V. Panayotov, G. Chen, D. Povey and S. Khudanpur. Clips `1272-135031-0006`, `7176-88083-0009`, `4507-16021-0033` and `5683-32879-0002` were converted to WAV. The reference panel identifies the selected clip. [LibriSpeech](https://www.openslr.org/12/) · [CC BY 4.0 license](https://creativecommons.org/licenses/by/4.0/)
+
+See the upstream model cards for intended uses, licenses and training data. [Silero VAD](https://github.com/snakers4/silero-vad) · [Whisper base.en](https://huggingface.co/openai/whisper-base.en) · [OPUS-MT English–Spanish](https://huggingface.co/Helsinki-NLP/opus-mt-en-es) · [English–French](https://huggingface.co/Helsinki-NLP/opus-mt-en-fr) · [English–German](https://huggingface.co/Helsinki-NLP/opus-mt-en-de)

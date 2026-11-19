@@ -1,7 +1,7 @@
 from dataclasses import asdict, dataclass
 from time import perf_counter
 
-from .audio import AudioBuffer, normalize_audio
+from .audio import AudioBuffer, normalize_audio, recorded_chunks
 from .config import Config, validate_language
 from .text import TextProcessor
 
@@ -55,10 +55,9 @@ class TranslationPipeline:
     def audio(self, samples, sample_rate, language="es", clean=True, strategy="pause"):
         validate_language(language)
         audio = normalize_audio(samples, sample_rate, self.config.sample_rate)
-        buffer = self.buffer(strategy)
-        chunks = []
-        step = self.config.sample_rate // 2
-        for offset in range(0, len(audio), step):
-            chunks.extend(buffer.push(audio[offset:offset + step]))
-        chunks.extend(buffer.push(audio[:0], final=True))
+        if strategy == "pause":
+            chunks = recorded_chunks(audio, self.models, self.config.sample_rate,
+                                     self.config.recording_window_seconds, self.config.pause_seconds)
+        else:
+            chunks = self.buffer(strategy).push(audio, final=True)
         return [self.segment(chunk, language, clean) for chunk in chunks]

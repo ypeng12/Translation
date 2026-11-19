@@ -1,0 +1,29 @@
+{
+  "captions": [
+    {
+      "available_s": 7.857929510995746,
+      "raw_english": "Insects were the first animals to take to the air.",
+      "translation": "Los insectos fueron los primeros animales que tomaron el aire."
+    },
+    {
+      "available_s": 16.658667591997073,
+      "raw_english": "Their ability to fly helped them evade enemies more easily and find food and mates more efficiently.",
+      "translation": "Su habilidad para volar los ayudó a evadir a sus enemigos más fácilmente y a encontrar comida y parejas más eficientes."
+    }
+  ],
+  "audio_s": 12.84,
+  "compute_s": 7.693997836970084,
+  "rtf": 0.5992210153403492,
+  "first_caption_s": 7.857929510995746,
+  "last_caption_minus_capture_end_s": 3.818667591997073,
+  "done_after_capture_end_s": 3.8186769740024467,
+  "label": "final-greedy",
+  "id": "fleurs-dev-1544",
+  "language": "es",
+  "platform": "macOS-14.6.1-x86_64-i386-64bit",
+  "threads_requested": 2,
+  "threads_effective": 2,
+  "frame_s": 0.5,
+  "wer": 0.0,
+  "chrf_pp": 57.66046935762454
+}

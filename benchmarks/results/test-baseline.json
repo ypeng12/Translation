@@ -1,0 +1,114 @@
+{
+  "label": "baseline-31a5262",
+  "platform": "macOS-14.6.1-x86_64-i386-64bit",
+  "torch": "2.2.2",
+  "transformers": "4.49.0",
+  "requested_threads": 2,
+  "effective_threads": 1,
+  "asr_model": "openai/whisper-base.en",
+  "mt_models": {
+    "es": "Helsinki-NLP/opus-mt-en-es",
+    "fr": "Helsinki-NLP/opus-mt-en-fr",
+    "de": "Helsinki-NLP/opus-mt-en-de"
+  },
+  "audio_s": 35.5,
+  "wall_s_es": 26.369804791989736,
+  "rtf_es": 0.7428114025912602,
+  "wer": 0.05263157894736842,
+  "wer_whisper_english": 0.04054054054054054,
+  "scores": {
+    "es": {
+      "speech_chrf_pp": 44.47519212449577,
+      "gold_text_chrf_pp": 44.94996292280207,
+      "ratio": 0.9894377933276234
+    },
+    "fr": {
+      "speech_chrf_pp": 54.317330909979425,
+      "gold_text_chrf_pp": 59.797698953463794,
+      "ratio": 0.9083515228947298
+    },
+    "de": {
+      "speech_chrf_pp": 58.87310223334944,
+      "gold_text_chrf_pp": 63.074472721830375,
+      "ratio": 0.93339031929748
+    }
+  },
+  "samples": [
+    {
+      "id": "fleurs-test-1980",
+      "asr": "Unfortunately, studying traffic flow is difficult because driver behavior cannot be predicted with one 100% certainty.",
+      "outputs": {
+        "es": "Desafortunadamente, estudiar el flujo de tráfico es difícil porque el comportamiento del conductor no se puede predecir con uno. 100% de certeza.",
+        "fr": "Malheureusement, l'étude de la circulation est difficile parce que le comportement du conducteur ne peut pas être prédit avec un. 100% de certitude.",
+        "de": "Leider ist das Studium des Verkehrsflusses schwierig, weil das Verhalten des Fahrers nicht mit einem vorausgesagt werden kann. 100% Sicherheit."
+      },
+      "gold_mt": {
+        "es": "Desafortunadamente, estudiar el flujo de tráfico es difícil porque el comportamiento del conductor no puede predecirse con un cien por ciento de certeza.",
+        "fr": "Malheureusement, il est difficile d'étudier le débit de la circulation parce que le comportement du conducteur ne peut être prédit avec une certitude de cent pour cent.",
+        "de": "Leider ist das Studium des Verkehrsflusses schwierig, weil das Verhalten des Fahrers nicht mit hundertprozentiger Sicherheit vorhergesagt werden kann."
+      },
+      "segment_count": 2,
+      "audio_s": 12.64,
+      "wall_s_es": 8.63473281399638,
+      "asr_s": 5.366508227998565,
+      "mt_s_es": 1.9014945189919672
+    },
+    {
+      "id": "fleurs-test-1771",
+      "asr": "Remember that even though music on the main stages may have finished, there may be sections of the festival that will keep playing music until late into the night.",
+      "outputs": {
+        "es": "Recuerde que aunque la música en los escenarios principales puede haber terminado, puede haber secciones del festival que seguirán tocando música hasta altas horas de la noche.",
+        "fr": "Rappelez-vous que même si la musique sur les principales scènes a peut-être fini, il peut y avoir des sections du festival qui continueront à jouer de la musique jusqu'à tard dans la nuit.",
+        "de": "Denken Sie daran, dass, auch wenn die Musik auf den Hauptbühnen beendet sein mag, es Abschnitte des Festivals geben kann, die bis spät in die Nacht Musik spielen werden."
+      },
+      "gold_mt": {
+        "es": "Recuerde que aunque la música en los escenarios principales puede haber terminado, puede haber secciones del festival que seguirán tocando música hasta altas horas de la noche.",
+        "fr": "Rappelez-vous que même si la musique sur les principales scènes a peut-être fini, il peut y avoir des sections du festival qui continueront à jouer de la musique jusqu'à tard dans la nuit.",
+        "de": "Denken Sie daran, dass, auch wenn die Musik auf den Hauptbühnen beendet sein mag, es Abschnitte des Festivals geben kann, die bis spät in die Nacht Musik spielen werden."
+      },
+      "segment_count": 1,
+      "audio_s": 8.94,
+      "wall_s_es": 6.2169045909977285,
+      "asr_s": 3.213478561003285,
+      "mt_s_es": 1.8015469539968763
+    },
+    {
+      "id": "fleurs-test-1669",
+      "asr": "Police Superintendent Chandra Shikar Solanki said that accused appeared in court with covered faces.",
+      "outputs": {
+        "es": "La Superintendente de Policía Chandra Shikar Solanki dijo que el acusado compareció ante el tribunal con rostros cubiertos.",
+        "fr": "Le commissaire de police Chandra Shikar Solanki a dit que l'accusé a comparu devant le tribunal avec des visages couverts.",
+        "de": "Polizei Superintendent Chandra Shikar Solanki sagte, dass Angeklagte vor Gericht mit verdeckten Gesichtern erschienen."
+      },
+      "gold_mt": {
+        "es": "La superintendente de policía Chandra Shekhar Solanki dijo que el acusado compareció ante el tribunal con las caras cubiertas.",
+        "fr": "La commissaire de police Chandra Shekhar Solanki a dit que l'accusé a comparu devant le tribunal avec des visages couverts.",
+        "de": "Polizeikommissarin Chandra Shekhar Solanki sagte, der Angeklagte erschien vor Gericht mit verdeckten Gesichtern."
+      },
+      "segment_count": 1,
+      "audio_s": 7.2,
+      "wall_s_es": 5.69617091499822,
+      "asr_s": 2.924547964001249,
+      "mt_s_es": 1.7034355379946646
+    },
+    {
+      "id": "fleurs-test-1949",
+      "asr": "The term bug is used by entomologists in a formal sense for this group of insects.",
+      "outputs": {
+        "es": "El término bug es utilizado por los entomólogos en un sentido formal para este grupo de insectos.",
+        "fr": "Le terme bug est utilisé par les entomologistes dans un sens formel pour ce groupe d'insectes.",
+        "de": "Der Begriff Bug wird von Entomologen in einem formalen Sinne für diese Gruppe von Insekten verwendet."
+      },
+      "gold_mt": {
+        "es": "El término bug es utilizado por los entomólogos en un sentido formal para este grupo de insectos.",
+        "fr": "Le terme bug est utilisé par les entomologistes dans un sens formel pour ce groupe d'insectes.",
+        "de": "Der Begriff Bug wird von Entomologen in einem formalen Sinne für diese Gruppe von Insekten verwendet."
+      },
+      "segment_count": 1,
+      "audio_s": 6.72,
+      "wall_s_es": 5.821996471997409,
+      "asr_s": 3.3009295919982833,
+      "mt_s_es": 1.4500957310010563
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "label": "full-context",
+  "platform": "macOS-14.6.1-x86_64-i386-64bit",
+  "torch": "2.2.2",
+  "transformers": "4.49.0",
+  "requested_threads": 2,
+  "effective_threads": 2,
+  "asr_model": "openai/whisper-base.en",
+  "mt_models": {
+    "es": "Helsinki-NLP/opus-mt-en-es",
+    "fr": "Helsinki-NLP/opus-mt-en-fr",
+    "de": "Helsinki-NLP/opus-mt-en-de"
+  },
+  "audio_s": 37.8,
+  "wall_s_es": 13.19646739399468,
+  "rtf_es": 0.3491128940210233,
+  "wer": 0.0425531914893617,
+  "wer_whisper_english": 0.031914893617021274,
+  "scores": {
+    "es": {
+      "speech_chrf_pp": 53.39310071810968,
+      "gold_text_chrf_pp": 56.511218885233646,
+      "ratio": 0.9448230240183559
+    },
+    "fr": {
+      "speech_chrf_pp": 63.723020227246366,
+      "gold_text_chrf_pp": 67.27024759311615,
+      "ratio": 0.9472690008913721
+    },
+    "de": {
+      "speech_chrf_pp": 62.89964632360374,
+      "gold_text_chrf_pp": 62.450773801047646,
+      "ratio": 1.0071876214694486
+    }
+  },
+  "samples": [
+    {
+      "id": "fleurs-dev-1590",
+      "asr": "The main local beer is number one. It is not a complex beer but pleasant and refreshing. The other local beer is called Monta.",
+      "outputs": {
+        "es": "La principal cerveza local es la número uno. No es una cerveza compleja, pero agradable y refrescante. La otra cerveza local se llama Monta.",
+        "fr": "La bière locale principale est numéro un. Ce n'est pas une bière complexe mais agréable et rafraîchissante. L'autre bière locale est appelée Monta.",
+        "de": "Das wichtigste lokale Bier ist Nummer eins. Es ist kein komplexes Bier, sondern angenehm und erfrischend. Das andere lokale Bier wird Monta genannt."
+      },
+      "gold_mt": {
+        "es": "La cerveza local principal es 'Número Uno', no es una cerveza compleja, pero agradable y refrescante.La otra cerveza local se llama \"Manta\".",
+        "fr": "La bière locale principale est 'Number One', ce n'est pas une bière complexe, mais agréable et rafraîchissante. L'autre bière locale est appelée \"Manta\".",
+        "de": "Das wichtigste lokale Bier ist 'Nummer Eins', es ist kein komplexes Bier, sondern angenehm und erfrischend. Das andere lokale Bier wird \"Manta\" genannt."
+      },
+      "segment_count": 1,
+      "audio_s": 11.46,
+      "wall_s_es": 4.86306756400154,
+      "asr_s": 2.807061605999479,
+      "mt_s_es": 1.8067996200043126
+    },
+    {
+      "id": "fleurs-dev-1544",
+      "asr": "Insects were the first animals to take to the air. Their ability to fly helped them evade enemies more easily and find food and mates more efficiently.",
+      "outputs": {
+        "es": "Los insectos fueron los primeros animales en tomar el aire. Su capacidad de volar les ayudó a evadir a los enemigos más fácilmente y encontrar alimentos y parejas más eficientemente.",
+        "fr": "Les insectes ont été les premiers animaux à prendre l'air. Leur capacité à voler les a aidés à échapper plus facilement aux ennemis et à trouver de la nourriture et des compagnons plus efficacement.",
+        "de": "Insekten waren die ersten Tiere, die in die Luft nahmen. Ihre Fähigkeit zu fliegen half ihnen, Feinde leichter zu entkommen und Nahrung und Partner effizienter zu finden."
+      },
+      "gold_mt": {
+        "es": "Los insectos fueron los primeros animales en tomar el aire. Su capacidad de volar les ayudó a evadir a los enemigos más fácilmente y encontrar alimentos y parejas más eficientemente.",
+        "fr": "Les insectes ont été les premiers animaux à prendre l'air. Leur capacité à voler les a aidés à échapper plus facilement aux ennemis et à trouver de la nourriture et des compagnons plus efficacement.",
+        "de": "Insekten waren die ersten Tiere, die in die Luft nahmen. Ihre Fähigkeit zu fliegen half ihnen, Feinde leichter zu entkommen und Nahrung und Partner effizienter zu finden."
+      },
+      "segment_count": 1,
+      "audio_s": 12.84,
+      "wall_s_es": 3.2839162909949664,
+      "asr_s": 1.8969311289984034,
+      "mt_s_es": 1.1801706000042032
+    },
+    {
+      "id": "fleurs-dev-1646",
+      "asr": "There are many beaches due to Auckland straddling of two harbors. The most popular ones are in three areas.",
+      "outputs": {
+        "es": "Hay muchas playas debido a Auckland a lo largo de dos puertos. Las más populares están en tres áreas.",
+        "fr": "Il y a beaucoup de plages en raison d'Auckland chevauchant deux ports. Les plus populaires sont dans trois zones.",
+        "de": "Es gibt viele Strände durch Auckland Straddling von zwei Häfen. Die beliebtesten sind in drei Bereichen."
+      },
+      "gold_mt": {
+        "es": "Hay muchas playas, debido a que Auckland se extiende por dos puertos. Las más populares se encuentran en tres áreas.",
+        "fr": "Il y a beaucoup de plages, en raison du chevauchement d'Auckland de deux ports. Les plus populaires sont dans trois zones.",
+        "de": "Es gibt viele Strände, dank Auckland's straddling von zwei Häfen. Die beliebtesten sind in drei Bereichen."
+      },
+      "segment_count": 1,
+      "audio_s": 6.0,
+      "wall_s_es": 2.4168185379967326,
+      "asr_s": 1.562241785999504,
+      "mt_s_es": 0.774020910001127
+    },
+    {
+      "id": "fleurs-dev-1557",
+      "asr": "After seeing the horrors and atrocities of war during World War I, nations desire to avoid such a situation again in the future.",
+      "outputs": {
+        "es": "Después de ver los horrores y atrocidades de la guerra durante la Primera Guerra Mundial, las naciones desean evitar esta situación de nuevo en el futuro.",
+        "fr": "Après avoir vu les horreurs et les atrocités de la guerre pendant la Première Guerre mondiale, les nations veulent éviter une telle situation à l'avenir.",
+        "de": "Nachdem die Nationen die Schrecken und Gräueltaten des Krieges während des Ersten Weltkriegs gesehen haben, wollen sie in Zukunft eine solche Situation wieder vermeiden."
+      },
+      "gold_mt": {
+        "es": "Después de ver los horrores y atrocidades de la guerra durante la Primera Guerra Mundial, las naciones deseaban evitar esta situación de nuevo en el futuro.",
+        "fr": "Après avoir vu les horreurs et les atrocités de la guerre pendant la Première Guerre mondiale, les nations ont souhaité éviter une telle situation à l'avenir.",
+        "de": "Nachdem die Nationen die Schrecken und Gräueltaten des Krieges während des Ersten Weltkriegs gesehen hatten, wollten sie in Zukunft eine solche Situation wieder vermeiden."
+      },
+      "segment_count": 1,
+      "audio_s": 7.5,
+      "wall_s_es": 2.632665001001442,
+      "asr_s": 1.4948411029981798,
+      "mt_s_es": 1.043717086999095
+    }
+  ]
+}

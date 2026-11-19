@@ -3,7 +3,12 @@ import json
 import numpy as np
 import pytest
 
-from speech_translate.audio import AudioBuffer, normalize_audio
+from speech_translate.audio import (
+    AudioBuffer,
+    StreamingResampler,
+    normalize_audio,
+    recorded_chunks,
+)
 from speech_translate.config import Config
 from speech_translate.evaluation import accuracy_ratio, read_manifest
 from speech_translate.pipeline import TranslationPipeline
@@ -39,6 +44,19 @@ def test_pcm_stereo_resampling_and_invalid_audio():
     assert normalize_audio(np.array([128], dtype=np.uint8), 16000)[0] == 0
     with pytest.raises(ValueError):
         normalize_audio(np.array([np.nan]), 16000)
+
+
+@pytest.mark.parametrize("rate", [8000, 16000, 22050, 24000, 32000, 44100, 48000, 96000])
+def test_streaming_resampling_matches_uninterrupted_pcm_with_fragmented_frames(rate):
+    # Non-periodic boundaries stress both FIR history and rational sample phase.
+    source = np.random.default_rng(2718).uniform(-.25, .25, rate + 17).astype(np.float32)
+    stream = StreamingResampler(rate)
+    output = []
+    for frame in np.array_split(source, [1, 89, 2741, 4003, 7027]):
+        output.append(stream.push(frame))
+    output.append(stream.push(source[:0], final=True))
+    np.testing.assert_allclose(np.concatenate(output), normalize_audio(source, rate), atol=1e-6, rtol=0)
+    assert not len(stream.push(source[:0], final=True))
 
 
 def test_pause_cut_and_final_flush_do_not_duplicate_or_drop_speech():
@@ -91,6 +109,70 @@ def test_pause_inside_frame_preserves_following_speech():
     assert [len(chunk) for chunk in chunks] == [16]
     chunks.extend(buffer.push(np.empty(0), final=True))
     np.testing.assert_array_equal(np.concatenate(chunks), audio)
+
+
+def test_recording_scans_once_and_uses_context_beyond_live_limit():
+    class Detector:
+        calls = 0
+
+        def timestamps(self, audio):
+            self.calls += 1
+            # A quiet opening/ending may fall below the detector threshold.
+            return [{"start": 12, "end": 44}, {"start": 57, "end": 103}]
+
+    detector = Detector()
+    audio = np.arange(110)
+    chunks = list(recorded_chunks(audio, detector, sample_rate=10, max_seconds=25, pause_seconds=.6))
+    assert detector.calls == 1 and len(chunks) == 1
+    np.testing.assert_array_equal(chunks[0], audio)
+
+
+def test_recorded_window_prefers_a_breath_and_retains_all_speech():
+    class Detector:
+        def timestamps(self, audio):
+            return [{"start": 0, "end": 77}, {"start": 81, "end": 209},
+                    {"start": 240, "end": 250}]
+
+    audio = np.arange(250)
+    chunks = list(recorded_chunks(audio, Detector(), sample_rate=10, max_seconds=10, pause_seconds=.6))
+    assert chunks[0][-1] == 78  # Cut in the short breath rather than mid-word at sample 100.
+    assert all(0 < len(chunk) <= 100 for chunk in chunks)
+    joined = np.concatenate(chunks)
+    assert len(np.unique(joined)) == len(joined)
+    assert set(np.r_[0:77, 81:209, 240:250]).issubset(joined)
+
+
+def test_streaming_pause_prefers_a_breath_before_hard_limit():
+    class Detector:
+        def timestamps(self, audio):
+            return [{"start": 0, "end": 29}, {"start": 31, "end": 40}] if len(audio) == 40 else [
+                {"start": 0, "end": len(audio)}]
+
+    buffer = AudioBuffer(Detector(), sample_rate=10, max_seconds=4, pause_seconds=.6)
+    audio = np.arange(40)
+    chunks = buffer.push(audio)
+    assert len(chunks[0]) == 30
+    chunks.extend(buffer.push(np.empty(0), final=True))
+    np.testing.assert_array_equal(np.concatenate(chunks), audio)
+
+
+def test_continuous_live_voicing_scans_recent_audio_and_keeps_onset():
+    class Detector(FakeModels):
+        def __init__(self):
+            self.scanned = []
+
+        def timestamps(self, audio):
+            self.scanned.append(len(audio))
+            return super().timestamps(audio)
+
+    detector = Detector()
+    buffer = AudioBuffer(detector, sample_rate=10, max_seconds=8, pause_seconds=.6)
+    for _ in range(12):
+        assert not buffer.push(np.ones(5))
+    assert detector.scanned[-1] < len(buffer.pending) // 2
+    chunks = buffer.push(np.zeros(6))
+    assert len(chunks) == 1
+    np.testing.assert_array_equal(chunks[0], np.r_[np.ones(60), np.zeros(6)])
 
 
 def test_invalid_audio_configuration():

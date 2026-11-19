@@ -26,7 +26,7 @@ live-translate = "speech_translate.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-speech_translate = ["web/*.html", "web/*.css", "web/*.js"]
+speech_translate = ["web/*.html", "web/*.css", "web/*.js", "web/*.wav"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

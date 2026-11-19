@@ -18,7 +18,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from .audio import normalize_audio
+from .audio import StreamingResampler
 from .config import LANGUAGES, validate_language
 
 WEB = Path(__file__).parent / "web"
@@ -119,10 +119,11 @@ def create_app(pipeline):
             if not isinstance(clean, bool):
                 raise TypeError("clean must be a boolean")
             buffer = pipeline.buffer(strategy)
+            resampler = StreamingResampler(rate, pipeline.config.sample_rate)
             await socket.send_json({"type": "ready"})
 
             def consume(data, final):
-                chunks = buffer.push(data, final=final)
+                chunks = buffer.push(resampler.push(data, final=final), final=final)
                 return [pipeline.segment(chunk, language, clean).to_dict() for chunk in chunks]
 
             while True:
@@ -139,8 +140,7 @@ def create_app(pipeline):
                 if len(raw) % 4 or len(raw) > rate * 4 * 2:
                     raise ValueError("PCM frames must contain at most 2 seconds of float32 mono audio")
                 samples = np.frombuffer(raw, dtype="<f4").copy()
-                normalized = normalize_audio(samples, rate, pipeline.config.sample_rate)
-                results = await infer(consume, normalized, final)
+                results = await infer(consume, samples, final)
                 for result in results:
                     await socket.send_json({"type": "segment", **result})
                 await socket.send_json({"type": "done" if final else "ack"})

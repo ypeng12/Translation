@@ -1,0 +1,34 @@
+{
+  "model": "Helsinki-NLP/opus-mt-en-es",
+  "revision": "5bc4493d463cf000c1f0b50f8d56886a392ed4ab",
+  "platform": "macOS-14.6.1-x86_64-i386-64bit",
+  "torch": "2.2.2",
+  "transformers": "4.49.0",
+  "threads": 2,
+  "num_beams": 4,
+  "input_ids": [
+    "fleurs-dev-1590",
+    "fleurs-dev-1544",
+    "fleurs-dev-1646",
+    "fleurs-dev-1557"
+  ],
+  "runs_seconds": {
+    "on": [
+      3.4551514520135242,
+      3.4111959770016256,
+      4.6368592669969075,
+      5.455761204008013
+    ],
+    "off": [
+      10.013638030992297,
+      10.738439582986757,
+      13.808796156998142,
+      20.57747619600559
+    ]
+  },
+  "median_seconds": {
+    "on": 4.046005359505216,
+    "off": 12.27361786999245
+  },
+  "output_token_ids_equal_across_all_runs": true
+}

@@ -78,11 +78,18 @@ class ModelStore:
 
     def timestamps(self, audio: np.ndarray) -> list[dict]:
         import torch
-        from silero_vad import get_speech_timestamps, load_silero_vad
         with self.lock:
             if self._vad is None:
-                self._vad = load_silero_vad()
-            return get_speech_timestamps(torch.from_numpy(audio), self._vad,
+                # Importing Silero sets Torch's process-wide thread count to one.
+                # Keep the host's configured CPU budget for Whisper and Marian.
+                threads = torch.get_num_threads()
+                try:
+                    from silero_vad import get_speech_timestamps, load_silero_vad
+                    self._vad = load_silero_vad(), get_speech_timestamps
+                finally:
+                    torch.set_num_threads(threads)
+            model, get_speech_timestamps = self._vad
+            return get_speech_timestamps(torch.from_numpy(audio), model,
                                          sampling_rate=self.config.sample_rate,
                                          min_silence_duration_ms=200,
                                          speech_pad_ms=0)

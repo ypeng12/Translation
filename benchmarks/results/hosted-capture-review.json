@@ -1,0 +1,92 @@
+{
+  "space": "Ypeng12/live-translate",
+  "host": "https://ypeng12-live-translate.hf.space",
+  "revision": "d48ddd525e67f233c9b8669d180b6dbc172a2db4",
+  "sample_rate": 44100,
+  "options": {
+    "language": "es",
+    "strategy": "pause",
+    "clean": true
+  },
+  "frame_s": 0.5,
+  "scores": {
+    "live": {
+      "wer": 0.05263157894736842,
+      "word_errors": 4,
+      "reference_words": 76,
+      "spanish_chrf_pp": 44.47519212449577
+    },
+    "review": {
+      "wer": 0.06578947368421052,
+      "word_errors": 5,
+      "reference_words": 76,
+      "spanish_chrf_pp": 44.4929029262208
+    }
+  },
+  "samples": [
+    {
+      "id": "fleurs-test-1980",
+      "audio_s": 12.64,
+      "english_reference": "Unfortunately, studying traffic flow is difficult because driver behavior cannot be predicted with one-hundred percent certainty.",
+      "spanish_reference": "Lamentablemente, no es tarea sencilla estudiar el flujo del tráfico, ya que es no es posible hacer predicciones exactas sobre el comportamiento de los conductores.",
+      "live": {
+        "segments": 2,
+        "english": "Unfortunately, studying traffic flow is difficult because driver behavior cannot be predicted with one. 100% certainty.",
+        "spanish": "Desafortunadamente, estudiar el flujo de tráfico es difícil porque el comportamiento del conductor no se puede predecir con uno. 100% de certeza."
+      },
+      "review": {
+        "segments": 1,
+        "english": "Unfortunately, studying traffic flow is difficult because driver behavior cannot be predicted with 100% certainty.",
+        "spanish": "Desafortunadamente, estudiar el flujo de tráfico es difícil porque el comportamiento del conductor no se puede predecir con 100% de certeza."
+      }
+    },
+    {
+      "id": "fleurs-test-1771",
+      "audio_s": 8.94,
+      "english_reference": "Remember that even though music on the main stages may have finished, there may be sections of the festival that will keep playing music until late into the night.",
+      "spanish_reference": "Hay que tener en cuenta que, si bien las actuaciones musicales puede que hayan finalizado, en otras zonas del festival podrían continuar hasta altas horas de la madrugada.",
+      "live": {
+        "segments": 1,
+        "english": "Remember that even though music on the main stages may have finished, there may be sections of the festival that will keep playing music until late into the night.",
+        "spanish": "Recuerde que aunque la música en los escenarios principales puede haber terminado, puede haber secciones del festival que seguirán tocando música hasta altas horas de la noche."
+      },
+      "review": {
+        "segments": 1,
+        "english": "Remember that even though music on the main stages may have finished, there may be sections of the festival that will keep playing music until late into the night.",
+        "spanish": "Recuerde que aunque la música en los escenarios principales puede haber terminado, puede haber secciones del festival que seguirán tocando música hasta altas horas de la noche."
+      }
+    },
+    {
+      "id": "fleurs-test-1669",
+      "audio_s": 7.2,
+      "english_reference": "Police superintendent Chandra Shekhar Solanki said the accused appeared in court with covered faces.",
+      "spanish_reference": "Según manifestara el superintendente de la policía, Chandra Shekhar Solanki, los acusados se presentaron ante el tribunal con sus rostros cubiertos.",
+      "live": {
+        "segments": 1,
+        "english": "Police Superintendent Chandra Shikar Solanki said that accused appeared in court with covered faces.",
+        "spanish": "La Superintendente de Policía Chandra Shikar Solanki dijo que el acusado compareció ante el tribunal con rostros cubiertos."
+      },
+      "review": {
+        "segments": 1,
+        "english": "Police Superintendent Chandra Shikar Solanki said that accused appeared in court with covered faces.",
+        "spanish": "La Superintendente de Policía Chandra Shikar Solanki dijo que el acusado compareció ante el tribunal con rostros cubiertos."
+      }
+    },
+    {
+      "id": "fleurs-test-1949",
+      "audio_s": 6.72,
+      "english_reference": "The term bug is used by entomologists in a formal sense for this group of insects.",
+      "spanish_reference": "Los entomólogos emplean el término insecto parásito en un sentido formal para referirse a este grupo de artrópodos.",
+      "live": {
+        "segments": 1,
+        "english": "The term bug is used by entomologists in a formal sense for this group of insects.",
+        "spanish": "El término bug es utilizado por los entomólogos en un sentido formal para este grupo de insectos."
+      },
+      "review": {
+        "segments": 1,
+        "english": "The term bug is used by entomologists in a formal sense for this group of insects.",
+        "spanish": "El término bug es utilizado por los entomólogos en un sentido formal para este grupo de insectos."
+      }
+    }
+  ]
+}

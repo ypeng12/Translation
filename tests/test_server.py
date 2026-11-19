@@ -5,6 +5,7 @@ import pytest
 import soundfile as sf
 from fastapi.testclient import TestClient
 
+from speech_translate.audio import normalize_audio
 from speech_translate.pipeline import TranslationPipeline
 from speech_translate.server import MAX_DECODED_SAMPLES, create_app
 
@@ -48,6 +49,24 @@ def test_audio_api_validates_files_and_preserves_segments():
         assert response.status_code == 400
 
 
+@pytest.mark.parametrize("filename", [
+    "example.wav", "example-hawk.wav", "example-mountain.wav", "example-arrival.wav",
+])
+def test_bundled_demo_audio_can_be_played_and_submitted(filename):
+    with client() as api:
+        page = api.get("/").text
+        assert 'id="translate-example"' in page
+        assert f'value="/assets/{filename}"' in page
+        sample = api.get(f"/assets/{filename}")
+        assert sample.status_code == 200
+        assert sf.info(io.BytesIO(sample.content)).samplerate == 16000
+        result = api.post("/api/translate/audio", files={"audio": (filename, sample.content)},
+                          data={"language": "fr"})
+        assert result.status_code == 200
+        segments = result.json()["segments"]
+        assert segments and all(segment["translation"] == "fr:Hello." for segment in segments)
+
+
 def test_websocket_flushes_final_fragment_once():
     with client() as api, api.websocket_connect("/api/live") as ws:
         ws.send_json({"language": "es", "sample_rate": 16000})
@@ -60,6 +79,26 @@ def test_websocket_flushes_final_fragment_once():
         assert segment["translation"] == "es:Hello."
         assert segment["audio_seconds"] == .1
         assert ws.receive_json()["type"] == "done"
+
+
+def test_websocket_preserves_non_native_microphone_rate_through_final_flush():
+    class CapturingModels(DemoModels):
+        def transcribe(self, audio):
+            self.received = audio.copy()
+            return "Test."
+
+    models = CapturingModels()
+    original = np.random.default_rng(42).uniform(-.2, .2, 23001).astype("<f4")
+    with TestClient(create_app(TranslationPipeline(models))) as api, api.websocket_connect("/api/live") as ws:
+        ws.send_json({"language": "es", "sample_rate": 44100, "strategy": "fixed"})
+        assert ws.receive_json()["type"] == "ready"
+        for frame in np.array_split(original, [128, 1234, 22050]):
+            ws.send_bytes(frame.tobytes())
+            assert ws.receive_json()["type"] == "ack"
+        ws.send_json({"type": "stop"})
+        assert ws.receive_json()["type"] == "segment"
+        assert ws.receive_json()["type"] == "done"
+    np.testing.assert_allclose(models.received, normalize_audio(original, 44100), atol=1e-6, rtol=0)
 
 
 def test_websocket_pause_then_stop_does_not_duplicate():

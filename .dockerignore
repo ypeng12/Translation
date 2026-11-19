@@ -1,0 +1,13 @@
+**
+!pyproject.toml
+!src/
+!src/speech_translate/
+!src/speech_translate/*.py
+!src/speech_translate/web/
+!src/speech_translate/web/*.html
+!src/speech_translate/web/*.css
+!src/speech_translate/web/*.js
+!src/speech_translate/web/example.wav
+!src/speech_translate/web/example-hawk.wav
+!src/speech_translate/web/example-mountain.wav
+!src/speech_translate/web/example-arrival.wav
